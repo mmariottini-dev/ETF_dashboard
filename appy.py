@@ -266,21 +266,38 @@ fund_names = load_fund_names(tuple(prices.columns))
 cols = st.columns(max(1, len(returns)))
 for col, (ticker, change) in zip(cols, returns.items()):
     category = categories.get(ticker, "Altro")
-    with col.container(border=True):
-        col.metric(ticker, f"{latest[ticker]:.2f}", f"{change:+.2f}% nel periodo")
+    with col.container(border=True) as card:
+        card.metric(ticker, f"{latest[ticker]:.2f}", f"{change:+.2f}% nel periodo")  
         first_price = prices[ticker].dropna().iloc[0]
         normalized_quote = latest[ticker] / first_price * 100
         pmc = pmc_values.get(ticker, 0.0)
         if pmc > 0:
             normalized_pmc = pmc / first_price * 100
             distance_from_pmc = (latest[ticker] / pmc - 1) * 100
-            col.caption(f"PMC standardizzato: {normalized_pmc:.2f} · prezzo attuale: {normalized_quote:.2f} ({distance_from_pmc:+.2f}% dal PMC)")
+            card.caption(f"PMC standardizzato: {normalized_pmc:.2f} · prezzo attuale: {normalized_quote:.2f} ({distance_from_pmc:+.2f}% dal PMC)")
         else:
-            col.caption(f"PMC standardizzato: inseriscilo nella barra laterale · prezzo attuale: {normalized_quote:.2f}")
-        col.caption(fund_names.get(ticker, "Nome non disponibile"))
-        col.markdown(
+            card.caption(f"PMC standardizzato: inseriscilo nella barra laterale · prezzo attuale: {normalized_quote:.2f}")
+        card.caption(fund_names.get(ticker, "Nome non disponibile"))
+        card.markdown(
             f'<span style="color:{ticker_colors.get(ticker, CATEGORY_COLORS["Altro"])};font-weight:600">● {category}</span>',
             unsafe_allow_html=True,
         )
+
+    # with col.container(border=True):
+        # col.metric(ticker, f"{latest[ticker]:.2f}", f"{change:+.2f}% nel periodo")
+        # first_price = prices[ticker].dropna().iloc[0]
+        # normalized_quote = latest[ticker] / first_price * 100
+        # pmc = pmc_values.get(ticker, 0.0)
+        # if pmc > 0:
+            # normalized_pmc = pmc / first_price * 100
+            # distance_from_pmc = (latest[ticker] / pmc - 1) * 100
+            # col.caption(f"PMC standardizzato: {normalized_pmc:.2f} · prezzo attuale: {normalized_quote:.2f} ({distance_from_pmc:+.2f}% dal PMC)")
+        # else:
+            # col.caption(f"PMC standardizzato: inseriscilo nella barra laterale · prezzo attuale: {normalized_quote:.2f}")
+        # col.caption(fund_names.get(ticker, "Nome non disponibile"))
+        # col.markdown(
+            # f'<span style="color:{ticker_colors.get(ticker, CATEGORY_COLORS["Altro"])};font-weight:600">● {category}</span>',
+            # unsafe_allow_html=True,
+        # )
 
 st.caption("Prezzi rettificati per dividendi e operazioni societarie (auto-adjust). Dati indicativi, non in tempo reale.")
