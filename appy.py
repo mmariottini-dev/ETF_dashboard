@@ -108,10 +108,26 @@ def load_fund_names(tickers: tuple[str, ...]) -> dict[str, str]:
     for ticker in tickers:
         try:
             info = yf.Ticker(ticker).info
-            name = info.get("shortName") or info.get("longName")
-            names[ticker] = str(name).strip() if name else "Nome non disponibile"
-        except Exception:
-            names[ticker] = "Nome non disponibile"
+            name = info.get("longName") or info.get("shortName")
+
+            if name:
+                names[ticker] = str(name).strip()
+            else:
+                names[ticker] = ticker
+                print(f"Nessun nome restituito da Yahoo per {ticker}")
+
+        except Exception as e:
+            names[ticker] = ticker
+            print(f"Errore Yahoo per {ticker}: {type(e).__name__}: {e}")
+
+        
+        # try:
+            # info = yf.Ticker(ticker).info
+            # name = info.get("shortName") or info.get("longName")
+            # names[ticker] = str(name).strip() if name else "Nome non disponibile"
+        # except Exception:
+            # names[ticker] = "Nome non disponibile"
+    
     return names
 
 # Accesso tramite link personale. Il token completo non viene salvato nel database.
