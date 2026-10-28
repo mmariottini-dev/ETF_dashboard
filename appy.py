@@ -1,7 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
-
+import requests
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -102,32 +102,69 @@ def load_prices(tickers: tuple[str, ...], period: str) -> pd.DataFrame:
         return pd.DataFrame()
     return pd.concat(series, axis=1).sort_index()
 
-@st.cache_data(ttl=86400, show_spinner=False)
-def load_fund_names(tickers: tuple[str, ...]) -> dict[str, str]:
-    names = {}
-    for ticker in tickers:
-        try:
-            info = yf.Ticker(ticker).info
-            name = info.get("longName") or info.get("shortName")
-
-            if name:
-                names[ticker] = str(name).strip()
-            else:
-                names[ticker] = ticker
-                print(f"Nessun nome restituito da Yahoo per {ticker}")
-
-        except Exception as e:
-            names[ticker] = ticker
-            print(f"Errore Yahoo per {ticker}: {type(e).__name__}: {e}")
-
-        
+# @st.cache_data(ttl=86400, show_spinner=False)
+# def load_fund_names(tickers: tuple[str, ...]) -> dict[str, str]:
+    # names = {}
+    # for ticker in tickers:
         # try:
             # info = yf.Ticker(ticker).info
             # name = info.get("shortName") or info.get("longName")
             # names[ticker] = str(name).strip() if name else "Nome non disponibile"
         # except Exception:
             # names[ticker] = "Nome non disponibile"
-    
+    # return names
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_fund_names(tickers: tuple[str, ...]) -> dict[str, str]:
+    names = {}
+
+    for ticker in tickers:
+        try:
+            response = requests.get(
+                "https://query1.finance.yahoo.com/v1/finance/search",
+                params={
+                    "q": ticker,
+                    "quotesCount": 10,
+                    "newsCount": 0,
+                },
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=10,
+            )
+            response.raise_for_status()
+
+            quotes = response.json().get("quotes", [])
+
+            # Prima prova a trovare il simbolo esatto.
+            match = next(
+                (
+                    item for item in quotes
+                    if item.get("symbol", "").upper() == ticker.upper()
+                ),
+                None,
+            )
+
+            # Se non è presente, cerca un risultato classificato come ETF.
+            if match is None:
+                match = next(
+                    (
+                        item for item in quotes
+                        if item.get("quoteType") == "ETF"
+                    ),
+                    None,
+                )
+
+            name = (
+                (match or {}).get("shortname")
+                or (match or {}).get("longname")
+                or (match or {}).get("displayName")
+            )
+
+            names[ticker] = str(name).strip() if name else ticker
+
+        except Exception:
+            # Se la ricerca fallisce, il dashboard continua a funzionare.
+            names[ticker] = ticker
+
     return names
 
 # Accesso tramite link personale. Il token completo non viene salvato nel database.
